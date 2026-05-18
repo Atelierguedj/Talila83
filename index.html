@@ -1,0 +1,56 @@
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyXXXXXXXX",
+  authDomain: "talilaniversaire.firebaseapp.com",
+  databaseURL: "https://talilaniversaire-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "talilaniversaire",
+  storageBucket: "talilaniversaire.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database();
+
+function renderPubPhotos(){
+
+  const galerie = document.getElementById("galerie");
+
+  if(!galerie) return;
+
+  db.ref("galerie-pub").on("value", (snapshot)=>{
+
+    galerie.innerHTML = "";
+
+    const data = snapshot.val();
+
+    if(!data){
+      galerie.innerHTML = "<p>Aucune photo</p>";
+      return;
+    }
+
+    const items = Object.values(data);
+
+    items.reverse().forEach((it)=>{
+
+      if(!it.file || !it.file.data) return;
+
+      galerie.innerHTML += `
+        <div class="photo-card">
+          <img src="${it.file.data}" style="width:100%;border-radius:20px;">
+        </div>
+      `;
+    });
+
+  });
+
+}
+
+renderPubPhotos();
+
+</script>

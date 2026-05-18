@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Récupération photos TALILA</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,sans-serif;}
+body{background:#1a0e04;color:#fff;padding:16px;max-width:600px;margin:0 auto;}
+h1{font-size:22px;color:#d4a017;margin-bottom:8px;}
+h2{font-size:16px;color:#d4a017;margin:20px 0 10px;border-bottom:1px solid #333;padding-bottom:6px;}
+.status{text-align:center;padding:20px;color:#aaa;font-size:14px;}
+.ok{color:#3a8a5a;}
+.item{background:#2a1e10;padding:12px;margin-bottom:10px;border-radius:8px;}
+.item-name{font-size:14px;color:#d4a017;font-weight:700;margin-bottom:2px;}
+.item-date{font-size:11px;color:#666;margin-bottom:6px;}
+.item-msg{font-size:13px;color:#ddd;margin-bottom:8px;white-space:pre-wrap;}
+.item img{width:100%;max-height:250px;object-fit:contain;border-radius:6px;background:#000;display:block;margin-bottom:8px;}
+.item video{width:100%;border-radius:6px;display:block;margin-bottom:8px;}
+.item audio{width:100%;margin-bottom:8px;}
+.dl{display:inline-block;background:#c8722a;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;border:none;cursor:pointer;}
+.empty{color:#555;font-size:13px;padding:10px;}
+</style>
+</head>
+<body>
+<h1>🎁 Récupération TALILAnniversaire</h1>
+<p style="color:#aaa;font-size:12px;margin-bottom:16px">Tous les souvenirs de tes invités</p>
+<div id="status" class="status">⏳ Connexion à Firebase...</div>
+
+<h2>📸 Galerie publique <span id="c1"></span></h2>
+<div id="d1"></div>
+
+<h2>🔒 Photos privées <span id="c2"></span></h2>
+<div id="d2"></div>
+
+<h2>🤣 Coin des dossiers <span id="c3"></span></h2>
+<div id="d3"></div>
+
+<h2>🎙️ Vocaux <span id="c4"></span></h2>
+<div id="d4"></div>
+
+<h2>📖 Livre d'or <span id="c5"></span></h2>
+<div id="d5"></div>
+
+<h2>🔥 Roasts <span id="c6"></span></h2>
+<div id="d6"></div>
+
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyCUDijnOQ7wh7kvSyuXw0iMybZDH1agRU0",
+  authDomain:"talilaniversaire.firebaseapp.com",
+  databaseURL:"https://talilaniversaire-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"talilaniversaire",
+  storageBucket:"talilaniversaire.firebasestorage.app",
+  messagingSenderId:"770459220517",
+  appId:"1:770459220517:web:f6cb6fafbecddde9771dcc"
+});
+var db = firebase.database();
+
+function fmt(ts){return new Date(ts).toLocaleString('fr-FR');}
+
+function dl(data, name){
+  var a=document.createElement('a');
+  a.href=data; a.download=name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function renderMedia(items, divId, countId){
+  var d=document.getElementById(divId);
+  var c=document.getElementById(countId);
+  c.textContent='('+items.length+')';
+  if(!items.length){d.innerHTML='<p class="empty">Aucun contenu</p>';return;}
+  d.innerHTML=items.map(function(it,i){
+    var media='', dlBtn='';
+    if(it.file){
+      var ext=it.file.type.includes('video')?'mp4':'jpg';
+      var fname=(it.name||'photo')+'_'+i+'.'+ext;
+      if(it.file.type.startsWith('video')){
+        media='<video src="'+it.file.data+'" controls></video>';
+      } else {
+        media='<img src="'+it.file.data+'">';
+      }
+      dlBtn='<button class="dl" onclick="dl(\''+it.file.data+'\',\''+fname+'\')">⬇ Télécharger</button>';
+    } else if(it.audio){
+      media='<audio src="'+it.audio+'" controls></audio>';
+      dlBtn='<button class="dl" onclick="dl(\''+it.audio+'\',\''+(it.name||'vocal')+'_'+i+'.webm\')">⬇ Télécharger</button>';
+    }
+    return '<div class="item"><div class="item-name">'+(it.name||'Anonyme')+'</div><div class="item-date">'+fmt(it.ts)+'</div>'+(it.msg?'<div class="item-msg">'+it.msg+'</div>':'')+media+dlBtn+'</div>';
+  }).join('');
+}
+
+function renderText(items, divId, countId){
+  var d=document.getElementById(divId);
+  var c=document.getElementById(countId);
+  c.textContent='('+items.length+')';
+  if(!items.length){d.innerHTML='<p class="empty">Aucun message</p>';return;}
+  d.innerHTML=items.map(function(it){
+    return '<div class="item"><div class="item-name">'+(it.name||'🔥 Anonyme')+'</div><div class="item-date">'+fmt(it.ts)+'</div><div class="item-msg">'+(it.msg||'')+'</div></div>';
+  }).join('');
+}
+
+var done=0;
+var total=6;
+
+function load(key, divId, countId, type){
+  db.ref(key).once('value').then(function(snap){
+    var val=snap.val();
+    var items=val?Object.values(val).reverse():[];
+    if(type==='media') renderMedia(items,divId,countId);
+    else renderText(items,divId,countId);
+    done++;
+    if(done===total){
+      document.getElementById('status').textContent='✅ Tout chargé !';
+      document.getElementById('status').className='status ok';
+    }
+  }).catch(function(e){
+    document.getElementById(divId).innerHTML='<p class="empty" style="color:#e85d8a">Erreur: '+e.message+'</p>';
+    done++;
+  });
+}
+
+load('galerie-pub','d1','c1','media');
+load('photos_priv','d2','c2','media');
+load('galerie-priv','d3','c3','media');
+load('vocaux','d4','c4','media');
+load('guestbook','d5','c5','text');
+load('roast','d6','c6','text');
+</script>
+</body>
+</html>
